@@ -2,6 +2,9 @@
 package server
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"github.com/go-chi/chi/v5"
 	"net"
 	"net/http"
@@ -35,4 +38,29 @@ func New(opts Options) *Server {
 			IdleTimeout:       5 * time.Second,
 		},
 	}
+}
+
+// Start the Server by setting up routes and listening for HTTP requests on the given address.
+func (s *Server) Start() error {
+	s.setupRoutes()
+
+	fmt.Println("Starting on", s.address)
+	if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("error starting server: %w", err)
+	}
+	return nil
+}
+
+// Stop the Server gracefully within the timeout.
+func (s *Server) Stop() error {
+	fmt.Println("Stopping")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := s.server.Shutdown(ctx); err != nil {
+		return fmt.Errorf("error stopping server: %w", err)
+	}
+
+	return nil
 }
